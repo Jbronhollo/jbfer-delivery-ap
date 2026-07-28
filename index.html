@@ -18,20 +18,33 @@
         .pedido-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; color: #00BCD4; }
         .pedido-cliente { font-size: 1rem; color: #FFF; font-weight: bold; }
         .pedido-detalhe { font-size: 0.85rem; color: #AAA; margin-top: 3px; }
+        
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; padding: 10px; overflow-y: auto; }
-        .modal-content { background: #1E1E1E; border: 1px solid #00BCD4; border-radius: 8px; padding: 15px; max-width: 500px; margin: 10px auto; }
+        .modal-content { background: #1E1E1E; border: 1px solid #00BCD4; border-radius: 8px; padding: 15px; max-width: 550px; margin: 10px auto; }
         .modal-title { color: #00BCD4; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 12px; font-size: 1.1rem; text-align: center; }
+        
         .field-group { margin-bottom: 10px; }
         .field-group label { display: block; font-size: 0.8rem; color: #AAA; margin-bottom: 3px; }
         .field-group input, .field-group select { width: 100%; padding: 8px; background: #2A2A2A; border: 1px solid #444; color: #FFF; border-radius: 4px; font-size: 0.95rem; }
-        .grid-2 { display: table; width: 100%; table-layout: fixed; }
-        .grid-col { display: table-cell; padding-right: 5px; }
-        .grid-col:last-child { padding-right: 0; padding-left: 5px; }
+        
+        .grid-2 { display: flex; gap: 8px; }
+        .grid-2 > div { flex: 1; }
+
+        /* Estilo dos Subformulários (Tabelas/Listas) */
+        .subform-box { background: #181818; border: 1px solid #333; border-radius: 6px; padding: 10px; margin-bottom: 15px; }
+        .subform-title { font-size: 0.85rem; font-weight: bold; color: #00BCD4; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .subform-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+        .subform-row select, .subform-row input { padding: 6px; background: #252525; border: 1px solid #444; color: #FFF; border-radius: 4px; font-size: 0.85rem; }
+        
+        .btn-add { background: #00BCD4; color: #000; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
+        .btn-del { background: #E53935; color: #FFF; border: none; width: 28px; height: 28px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        
         .btn { display: block; width: 100%; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; margin-bottom: 8px; font-size: 0.95rem; }
         .btn-novo { background: #FF9800; color: #000; font-size: 1rem; margin-bottom: 15px; }
-        .btn-rota { background: #00C853; color: #FFF; }
         .btn-salvar { background: #00BCD4; color: #000; }
         .btn-fechar { background: #555; color: #FFF; }
+        
+        .resumo-totais { background: #222; padding: 8px; border-radius: 4px; margin-bottom: 12px; font-size: 0.9rem; text-align: right; border-left: 3px solid #00BCD4; }
     </style>
 </head>
 <body>
@@ -39,77 +52,44 @@
     <button class="btn btn-novo" onclick="abrirModalNovaVenda()">➕ Nova Venda / Cadastro</button>
     <div id="lista-pedidos"><p style="text-align: center; color: #888;">Carregando vendas...</p></div>
 
-    <!-- MODAL EDIÇÃO DE PEDIDO -->
-    <div id="modal-detalhes" class="modal">
-        <div class="modal-content">
-            <h2 class="modal-title" id="lbl-id-pedido">Alterar Pedido</h2>
-            <div class="field-group"><label>Cliente</label><input type="text" id="edit-cliente" readonly></div>
-            <div class="field-group"><label>Endereço</label><input type="text" id="edit-endereco" readonly></div>
-            <a id="btn-gps" class="btn btn-rota" target="_blank">🗺️ Abrir Rota GPS</a>
-            <div class="field-group"><label>Produto</label>
-                <select id="edit-produto-combo" onchange="recalcularTotalEdicao()">
-                    <option value="GLP 13 KG" data-preco="145.00">GLP 13 KG - R$ 145,00</option>
-                    <option value="GLP 45 KG" data-preco="430.00">GLP 45 KG - R$ 430,00</option>
-                    <option value="AGUA 20L" data-preco="18.00">AGUA 20L - R$ 18,00</option>
-                </select>
-            </div>
-            <div class="grid-2">
-                <div class="grid-col"><div class="field-group"><label>Qtd.</label><input type="number" id="edit-qtd" value="1" min="1" oninput="recalcularTotalEdicao()"></div></div>
-                <div class="grid-col"><div class="field-group"><label>Preço Unit. (R$)</label><input type="number" step="0.01" id="edit-preco-unit" oninput="recalcularTotalEdicao()"></div></div>
-            </div>
-            <div class="grid-2">
-                <div class="grid-col"><div class="field-group"><label>Desconto (R$)</label><input type="number" step="0.01" id="edit-desconto" value="0.00" oninput="recalcularTotalEdicao()"></div></div>
-                <div class="grid-col"><div class="field-group"><label>Total Líquido (R$)</label><input type="number" step="0.01" id="edit-valor-total" readonly></div></div>
-            </div>
-            <div class="field-group"><label>Forma de Pagamento</label>
-                <select id="edit-pagamento">
-                    <option value="Dinheiro">Dinheiro</option>
-                    <option value="PIX">PIX</option>
-                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                    <option value="Cartão de Débito">Cartão de Débito</option>
-                    <option value="Vale Mercado">Vale Mercado</option>
-                </select>
-            </div>
-            <button class="btn btn-salvar" onclick="salvarAlteracoes()">💾 Salvar Alterações</button>
-            <button class="btn btn-fechar" onclick="fecharModal('modal-detalhes')">Cancelar</button>
-        </div>
-    </div>
-
-    <!-- MODAL NOVA VENDA / CADASTRO CLIENTE -->
+    <!-- MODAL NOVA VENDA -->
     <div id="modal-nova-venda" class="modal">
         <div class="modal-content">
-            <h2 class="modal-title">🛒 Nova Venda / Cliente</h2>
+            <h2 class="modal-title">🛒 Nova Venda Multi-Itens</h2>
+            
             <div class="field-group"><label>Nome do Cliente *</label><input type="text" id="novo-nome" placeholder="Nome Completo"></div>
             <div class="field-group"><label>Telefone / WhatsApp *</label><input type="text" id="novo-telefone" placeholder="(00) 00000-0000"></div>
             <div class="field-group"><label>Endereço Completo *</label><input type="text" id="novo-endereco" placeholder="Rua, Número"></div>
+            
             <div class="grid-2">
-                <div class="grid-col"><div class="field-group"><label>Bairro</label><input type="text" id="novo-bairro"></div></div>
-                <div class="grid-col"><div class="field-group"><label>Ponto de Ref.</label><input type="text" id="novo-referencia"></div></div>
+                <div class="field-group"><label>Bairro</label><input type="text" id="novo-bairro"></div>
+                <div class="field-group"><label>Ponto de Ref.</label><input type="text" id="novo-referencia"></div>
             </div>
-            <div class="field-group"><label>Produto</label>
-                <select id="novo-produto-combo" onchange="recalcularTotalNovo()">
-                    <option value="GLP 13 KG" data-preco="145.00">GLP 13 KG - R$ 145,00</option>
-                    <option value="GLP 45 KG" data-preco="430.00">GLP 45 KG - R$ 430,00</option>
-                    <option value="AGUA 20L" data-preco="18.00">AGUA 20L - R$ 18,00</option>
-                </select>
+
+            <!-- SUBFORMULÁRIO DE PRODUTOS -->
+            <div class="subform-box">
+                <div class="subform-title">
+                    <span>📦 PRODUTOS DO PEDIDO</span>
+                    <button class="btn-add" onclick="adicionarLinhaProduto()">+ Produto</button>
+                </div>
+                <div id="container-produtos"></div>
             </div>
-            <div class="grid-2">
-                <div class="grid-col"><div class="field-group"><label>Qtd.</label><input type="number" id="novo-qtd" value="1" min="1" oninput="recalcularTotalNovo()"></div></div>
-                <div class="grid-col"><div class="field-group"><label>Preço Unit. (R$)</label><input type="number" step="0.01" id="novo-preco-unit" value="145.00" oninput="recalcularTotalNovo()"></div></div>
+
+            <!-- SUBFORMULÁRIO DE PAGAMENTOS -->
+            <div class="subform-box">
+                <div class="subform-title">
+                    <span>💳 FORMAS DE PAGAMENTO</span>
+                    <button class="btn-add" onclick="adicionarLinhaPagamento()">+ Pagamento</button>
+                </div>
+                <div id="container-pagamentos"></div>
             </div>
-            <div class="grid-2">
-                <div class="grid-col"><div class="field-group"><label>Desconto (R$)</label><input type="number" step="0.01" id="novo-desconto" value="0.00" oninput="recalcularTotalNovo()"></div></div>
-                <div class="grid-col"><div class="field-group"><label>Total (R$)</label><input type="number" step="0.01" id="novo-valor-total" value="145.00" readonly></div></div>
+
+            <!-- RESUMO DE TOTAIS -->
+            <div class="resumo-totais">
+                <div>Total Produtos: <b id="lbl-total-produtos">R$ 0,00</b></div>
+                <div>Total Pago: <b id="lbl-total-pago" style="color: #00BCD4;">R$ 0,00</b></div>
             </div>
-            <div class="field-group"><label>Forma de Pagamento</label>
-                <select id="novo-pagamento">
-                    <option value="Dinheiro">Dinheiro</option>
-                    <option value="PIX">PIX</option>
-                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                    <option value="Cartão de Débito">Cartão de Débito</option>
-                    <option value="Vale Mercado">Vale Mercado</option>
-                </select>
-            </div>
+
             <button class="btn btn-salvar" onclick="gravarNovaVenda()">🚀 Registrar Venda</button>
             <button class="btn btn-fechar" onclick="fecharModal('modal-nova-venda')">Cancelar</button>
         </div>
@@ -119,7 +99,14 @@
         const firebaseConfig = { databaseURL: "https://jbfer-deliveryapp-default-rtdb.firebaseio.com" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        let idPedidoAtual = null;
+
+        const listaTabelaProdutos = [
+            { id: "GLP 13 KG", nome: "GLP 13 KG", preco: 145.00 },
+            { id: "GLP 45 KG", nome: "GLP 45 KG", preco: 430.00 },
+            { id: "AGUA 20L", nome: "ÁGUA MINERAL 20L", preco: 18.00 }
+        ];
+
+        const listaFormasPagamento = ["Dinheiro", "PIX", "Cartão de Crédito", "Cartão de Débito", "Vale Mercado"];
 
         db.ref('pedidos_pendentes').on('value', (snapshot) => {
             const container = document.getElementById('lista-pedidos');
@@ -133,78 +120,135 @@
                 const id = childSnapshot.key;
                 const card = document.createElement('div');
                 card.className = 'card-pedido';
-                card.onclick = () => abrirDetalhes(id, p);
+                
+                // Formatação do resumo visual do card
+                let textoProdutos = "";
+                if(Array.isArray(p.itens)) {
+                    textoProdutos = p.itens.map(i => `${i.qtd}x ${i.produto}`).join(', ');
+                } else {
+                    textoProdutos = p.produtos || 'Sem produtos';
+                }
+
+                let textoPagamento = "";
+                if(Array.isArray(p.pagamentos)) {
+                    textoPagamento = p.pagamentos.map(pg => `${pg.forma} (R$ ${parseFloat(pg.valor).toFixed(2)})`).join(', ');
+                } else {
+                    textoPagamento = p.forma_pagamento || 'A combinar';
+                }
+
                 card.innerHTML = `<div class="pedido-header"><span>#${p.pedido_id || id}</span><span>R$ ${parseFloat(p.valor || 0).toFixed(2)}</span></div>` +
                                  `<div class="pedido-cliente">${p.cliente || 'CLIENTE NÃO INFORMADO'}</div>` +
-                                 `<div class="pedido-detalhe">📦 ${p.produtos || 'Sem produto'} | ${p.forma_pagamento || 'A combinar'}</div>` +
+                                 `<div class="pedido-detalhe">📦 ${textoProdutos}</div>` +
+                                 `<div class="pedido-detalhe">💳 ${textoPagamento}</div>` +
                                  `<div class="pedido-detalhe">📍 ${p.endereco || 'Sem endereço'}</div>`;
                 container.appendChild(card);
             });
         });
 
-        function recalcularTotalEdicao() {
-            const combo = document.getElementById('edit-produto-combo');
-            const opt = combo.options[combo.selectedIndex];
-            if(opt && opt.dataset.preco && !document.getElementById('edit-preco-unit').value) {
-                document.getElementById('edit-preco-unit').value = opt.dataset.preco;
-            }
-            const qtd = parseFloat(document.getElementById('edit-qtd').value) || 1;
-            const unit = parseFloat(document.getElementById('edit-preco-unit').value) || 0;
-            const desc = parseFloat(document.getElementById('edit-desconto').value) || 0;
-            document.getElementById('edit-valor-total').value = ((qtd * unit) - desc).toFixed(2);
+        function abrirModalNovaVenda() {
+            document.getElementById('container-produtos').innerHTML = '';
+            document.getElementById('container-pagamentos').innerHTML = '';
+            adicionarLinhaProduto();
+            adicionarLinhaPagamento();
+            document.getElementById('modal-nova-venda').style.display = 'block';
         }
 
-        function recalcularTotalNovo() {
-            const combo = document.getElementById('novo-produto-combo');
-            const opt = combo.options[combo.selectedIndex];
-            if(opt && opt.dataset.preco) {
-                document.getElementById('novo-preco-unit').value = opt.dataset.preco;
-            }
-            const qtd = parseFloat(document.getElementById('novo-qtd').value) || 1;
-            const unit = parseFloat(document.getElementById('novo-preco-unit').value) || 0;
-            const desc = parseFloat(document.getElementById('novo-desconto').value) || 0;
-            document.getElementById('novo-valor-total').value = ((qtd * unit) - desc).toFixed(2);
-        }
-
-        function abrirDetalhes(id, data) {
-            idPedidoAtual = id;
-            document.getElementById('lbl-id-pedido').innerText = 'Alterar Pedido #' + (data.pedido_id || id);
-            document.getElementById('edit-cliente').value = data.cliente || '';
-            document.getElementById('edit-endereco').value = data.endereco || '';
-            document.getElementById('edit-produto-combo').value = data.produtos || 'GLP 13 KG';
-            document.getElementById('edit-qtd').value = data.quantidade || 1;
-            document.getElementById('edit-preco-unit').value = data.preco_unitario || 145.00;
-            document.getElementById('edit-desconto').value = data.desconto || 0.00;
-            document.getElementById('edit-valor-total').value = data.valor || 145.00;
-            document.getElementById('edit-pagamento').value = data.forma_pagamento || 'Dinheiro';
-            const enc = encodeURIComponent(data.endereco || '');
-            document.getElementById('btn-gps').href = `https://www.google.com/maps/search/?api=1&query=${enc}`;
-            document.getElementById('modal-detalhes').style.display = 'block';
-        }
-
-        function abrirModalNovaVenda() { document.getElementById('modal-nova-venda').style.display = 'block'; }
         function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        function salvarAlteracoes() {
-            if (!idPedidoAtual) return;
-            const dados = {
-                produtos: document.getElementById('edit-produto-combo').value,
-                quantidade: parseInt(document.getElementById('edit-qtd').value),
-                preco_unitario: parseFloat(document.getElementById('edit-preco-unit').value),
-                desconto: parseFloat(document.getElementById('edit-desconto').value),
-                valor: parseFloat(document.getElementById('edit-valor-total').value),
-                forma_pagamento: document.getElementById('edit-pagamento').value
-            };
-            db.ref('pedidos_pendentes/' + idPedidoAtual).update(dados)
-                .then(() => { alert('Pedido alterado com sucesso!'); fecharModal('modal-detalhes'); })
-                .catch((err) => { alert('Erro: ' + err.message); });
+        // GERENCIAMENTO DE LINHAS DE PRODUTOS
+        function adicionarLinhaProduto() {
+            const container = document.getElementById('container-produtos');
+            const row = document.createElement('div');
+            row.className = 'subform-row row-produto';
+            
+            let options = listaTabelaProdutos.map(p => `<option value="${p.id}" data-preco="${p.preco}">${p.nome}</option>`).join('');
+            
+            row.innerHTML = `
+                <select style="flex: 2;" class="prod-select" onchange="atualizarPrecoLinha(this)">${options}</select>
+                <input type="number" style="flex: 0.8;" class="prod-qtd" value="1" min="1" oninput="calcularTotais()">
+                <input type="number" style="flex: 1;" class="prod-preco" value="145.00" step="0.01" oninput="calcularTotais()">
+                <button class="btn-del" onclick="removerLinha(this)">X</button>
+            `;
+            container.appendChild(row);
+            atualizarPrecoLinha(row.querySelector('.prod-select'));
+        }
+
+        function atualizarPrecoLinha(selectElement) {
+            const row = selectElement.closest('.subform-row');
+            const opt = selectElement.options[selectElement.selectedIndex];
+            if(opt && opt.dataset.preco) {
+                row.querySelector('.prod-preco').value = parseFloat(opt.dataset.preco).toFixed(2);
+            }
+            calcularTotais();
+        }
+
+        // GERENCIAMENTO DE LINHAS DE PAGAMENTO
+        function adicionarLinhaPagamento() {
+            const container = document.getElementById('container-pagamentos');
+            const row = document.createElement('div');
+            row.className = 'subform-row row-pagamento';
+            
+            let options = listaFormasPagamento.map(f => `<option value="${f}">${f}</option>`).join('');
+            
+            row.innerHTML = `
+                <select style="flex: 2;" class="pag-forma">${options}</select>
+                <input type="number" style="flex: 1.2;" class="pag-valor" value="0.00" step="0.01" oninput="calcularTotais()">
+                <button class="btn-del" onclick="removerLinha(this)">X</button>
+            `;
+            container.appendChild(row);
+            calcularTotais();
+        }
+
+        function removerLinha(btn) {
+            btn.closest('.subform-row').remove();
+            calcularTotais();
+        }
+
+        function calcularTotais() {
+            let totalProd = 0;
+            document.querySelectorAll('.row-produto').forEach(row => {
+                const qtd = parseFloat(row.querySelector('.prod-qtd').value) || 0;
+                const preco = parseFloat(row.querySelector('.prod-preco').value) || 0;
+                totalProd += (qtd * preco);
+            });
+
+            let totalPag = 0;
+            document.querySelectorAll('.row-pagamento').forEach(row => {
+                totalPag += parseFloat(row.querySelector('.pag-valor').value) || 0;
+            });
+
+            document.getElementById('lbl-total-produtos').innerText = 'R$ ' + totalProd.toFixed(2);
+            document.getElementById('lbl-total-pago').innerText = 'R$ ' + totalPag.toFixed(2);
         }
 
         function gravarNovaVenda() {
             const nome = document.getElementById('novo-nome').value;
             const tel = document.getElementById('novo-telefone').value;
             const end = document.getElementById('novo-endereco').value;
+            
             if(!nome || !end) { alert('Preencha Nome e Endereço obrigatoriamente!'); return; }
+
+            // Coleta os Itens
+            const itens = [];
+            let totalGeral = 0;
+            document.querySelectorAll('.row-produto').forEach(row => {
+                const prod = row.querySelector('.prod-select').value;
+                const qtd = parseInt(row.querySelector('.prod-qtd').value) || 1;
+                const preco = parseFloat(row.querySelector('.prod-preco').value) || 0;
+                totalGeral += (qtd * preco);
+                itens.push({ produto: prod, qtd: qtd, preco_unitario: preco, total: (qtd * preco) });
+            });
+
+            // Coleta os Pagamentos
+            const pagamentos = [];
+            document.querySelectorAll('.row-pagamento').forEach(row => {
+                const forma = row.querySelector('.pag-forma').value;
+                const valor = parseFloat(row.querySelector('.pag-valor').value) || 0;
+                pagamentos.push({ forma: forma, valor: valor });
+            });
+
+            if(itens.length === 0) { alert('Adicione ao menos um produto!'); return; }
+
             const novoId = 'APP_' + Date.now();
             const dadosVenda = {
                 pedido_id: novoId,
@@ -212,17 +256,15 @@
                 telefone: tel,
                 endereco: end + (document.getElementById('novo-bairro').value ? ', ' + document.getElementById('novo-bairro').value : ''),
                 referencia: document.getElementById('novo-referencia').value,
-                produtos: document.getElementById('novo-produto-combo').value,
-                quantidade: parseInt(document.getElementById('novo-qtd').value),
-                preco_unitario: parseFloat(document.getElementById('novo-preco-unit').value),
-                desconto: parseFloat(document.getElementById('novo-desconto').value),
-                valor: parseFloat(document.getElementById('novo-valor-total').value),
-                forma_pagamento: document.getElementById('novo-pagamento').value,
+                itens: itens,
+                pagamentos: pagamentos,
+                valor: totalGeral,
                 status: 'PENDENTE',
                 origem: 'MOBILE'
             };
+
             db.ref('pedidos_pendentes/' + novoId).set(dadosVenda)
-                .then(() => { alert('Nova venda registrada com sucesso!'); fecharModal('modal-nova-venda'); })
+                .then(() => { alert('Nova venda gravada com sucesso!'); fecharModal('modal-nova-venda'); })
                 .catch((err) => { alert('Erro ao registrar: ' + err.message); });
         }
     </script>
