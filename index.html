@@ -20,7 +20,7 @@
         .pedido-cliente { font-size: 1rem; color: #FFF; font-weight: bold; }
         .pedido-detalhe { font-size: 0.85rem; color: #AAA; margin-top: 3px; }
         
-        /* Botões de Ação Directa nos Cards */
+        /* Botões de Ação Direta nos Cards */
         .card-actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid #2A2A2A; padding-top: 8px; }
         .btn-card { flex: 1; padding: 8px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; font-size: 0.85rem; display: inline-block; }
         .btn-card-mapa { background: #00C853; color: #FFF; }
@@ -231,11 +231,29 @@
             `;
             container.appendChild(row);
 
-            if(prodVal) row.querySelector('.prod-select').value = prodVal;
-            if(precoVal !== null) {
+            const selectElement = row.querySelector('.prod-select');
+
+            if (prodVal) {
+                // Tenta atribuir diretamente
+                selectElement.value = prodVal;
+                
+                // Se a atribuição direta falhou (devido a formatação legada ex: "1x GLP 13 KG - R$ 145,00"), busca o item correto
+                if (selectElement.selectedIndex === -1 || selectElement.value !== prodVal) {
+                    const strBusca = String(prodVal).toUpperCase();
+                    for (let i = 0; i < selectElement.options.length; i++) {
+                        const optValue = selectElement.options[i].value.toUpperCase();
+                        if (strBusca.includes(optValue) || optValue.includes(strBusca)) {
+                            selectElement.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if(precoVal !== null && precoVal !== undefined) {
                 row.querySelector('.prod-preco').value = parseFloat(precoVal).toFixed(2);
             } else {
-                atualizarPrecoLinha(row.querySelector('.prod-select'));
+                atualizarPrecoLinha(selectElement);
             }
             calcularTotais();
         }
@@ -263,7 +281,20 @@
                 <button class="btn-del" onclick="removerLinha(this)">X</button>
             `;
             container.appendChild(row);
-            if(formaVal) row.querySelector('.pag-forma').value = formaVal;
+            
+            const selectPag = row.querySelector('.pag-forma');
+            if(formaVal) {
+                selectPag.value = formaVal;
+                if(selectPag.selectedIndex === -1) {
+                    const strForma = String(formaVal).toUpperCase();
+                    for(let i = 0; i < selectPag.options.length; i++) {
+                        if(strForma.includes(selectPag.options[i].value.toUpperCase())) {
+                            selectPag.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
             calcularTotais();
         }
 
