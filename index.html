@@ -51,7 +51,7 @@
         .btn-salvar { background: #00BCD4; color: #000; }
         .btn-fechar { background: #555; color: #FFF; }
         
-        .resumo-totais { background: #222; padding: 8px; border-radius: 4px; margin-bottom: 12px; font-size: 0.9rem; text-align: right; border-left: 3px solid #00BCD4; }
+        .resumo-totais { background: #222; padding: 10px; border-radius: 4px; margin-bottom: 12px; font-size: 0.9rem; text-align: right; border-left: 4px solid #00BCD4; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -95,6 +95,7 @@
             <div class="resumo-totais">
                 <div>Total Produtos: <b id="lbl-total-produtos">R$ 0,00</b></div>
                 <div>Total Pago: <b id="lbl-total-pago" style="color: #00BCD4;">R$ 0,00</b></div>
+                <div>Saldo Restante: <b id="lbl-saldo-restante" style="color: #FFC107;">R$ 0,00</b></div>
             </div>
 
             <button class="btn btn-salvar" onclick="gravarVenda()">🚀 Salvar Pedido</button>
@@ -130,7 +131,6 @@
                 const card = document.createElement('div');
                 card.className = 'card-pedido';
                 
-                // Formatação do resumo visual dos produtos
                 let textoProdutos = "";
                 if(Array.isArray(p.itens)) {
                     textoProdutos = p.itens.map(i => `${i.qtd}x ${i.produto}`).join(', ');
@@ -138,7 +138,6 @@
                     textoProdutos = p.produtos || 'Sem produtos';
                 }
 
-                // Formatação do resumo visual dos pagamentos
                 let textoPagamento = "";
                 if(Array.isArray(p.pagamentos)) {
                     textoPagamento = p.pagamentos.map(pg => `${pg.forma} (R$ ${parseFloat(pg.valor).toFixed(2)})`).join(', ');
@@ -195,14 +194,12 @@
                 document.getElementById('container-produtos').innerHTML = '';
                 document.getElementById('container-pagamentos').innerHTML = '';
 
-                // Carrega produtos existentes
                 if(Array.isArray(p.itens) && p.itens.length > 0) {
                     p.itens.forEach(item => adicionarLinhaProduto(item.produto, item.qtd, item.preco_unitario));
                 } else {
                     adicionarLinhaProduto(p.produtos || "GLP 13 KG", p.quantidade || 1, p.preco_unitario || 145.00);
                 }
 
-                // Carrega pagamentos existentes
                 if(Array.isArray(p.pagamentos) && p.pagamentos.length > 0) {
                     p.pagamentos.forEach(pag => adicionarLinhaPagamento(pag.forma, pag.valor));
                 } else {
@@ -221,7 +218,6 @@
             const row = document.createElement('div');
             row.className = 'subform-row row-produto';
             
-            // Opção neutra em branco
             let options = `<option value="">-- Selecione o Produto --</option>`;
             options += listaTabelaProdutos.map(p => `<option value="${p.id}" data-preco="${p.preco}">${p.nome}</option>`).join('');
             
@@ -275,7 +271,6 @@
             
             let options = listaFormasPagamento.map(f => `<option value="${f}">${f}</option>`).join('');
             
-            // Cálculo do Saldo Restante caso o valor não tenha sido passado explicitamente
             let valorDefinido = 0;
             if (valorVal !== null && valorVal !== undefined) {
                 valorDefinido = parseFloat(valorVal);
@@ -337,8 +332,21 @@
                 totalPag += parseFloat(row.querySelector('.pag-valor').value) || 0;
             });
 
+            const saldo = totalProd - totalPag;
+
             document.getElementById('lbl-total-produtos').innerText = 'R$ ' + totalProd.toFixed(2);
             document.getElementById('lbl-total-pago').innerText = 'R$ ' + totalPag.toFixed(2);
+            
+            const lblSaldo = document.getElementById('lbl-saldo-restante');
+            lblSaldo.innerText = 'R$ ' + Math.abs(saldo).toFixed(2);
+
+            if (Math.abs(saldo) < 0.01) {
+                lblSaldo.style.color = '#00E676'; // Verde se zerado
+            } else if (saldo > 0) {
+                lblSaldo.style.color = '#FFC107'; // Amarelo se pendente
+            } else {
+                lblSaldo.style.color = '#FF5252'; // Vermelho se excedente
+            }
         }
 
         function gravarVenda() {
@@ -348,7 +356,6 @@
             
             if(!nome || !end) { alert('Preencha Nome e Endereço obrigatoriamente!'); return; }
 
-            // Coleta os Itens
             const itens = [];
             let totalGeralProdutos = 0;
             let temProdutoInvalido = false;
@@ -371,7 +378,6 @@
                 return; 
             }
 
-            // Coleta os Pagamentos
             const pagamentos = [];
             let totalGeralPagos = 0;
 
@@ -382,7 +388,6 @@
                 pagamentos.push({ forma: forma, valor: valor });
             });
 
-            // Validação Financeira: O Total Pago precisa ser estritamente igual ao Total de Produtos
             const diferenca = totalGeralProdutos - totalGeralPagos;
             if(Math.abs(diferenca) > 0.01) {
                 if(diferenca > 0) {
