@@ -14,11 +14,18 @@
         body { background-color: #121212; color: #E0E0E0; padding: 15px; }
         .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #00BCD4; padding-bottom: 10px; }
         .header h1 { color: #00BCD4; font-size: 1.3rem; }
-        .card-pedido { background: #1E1E1E; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 10px; cursor: pointer; }
+        
+        .card-pedido { background: #1E1E1E; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
         .pedido-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; color: #00BCD4; }
         .pedido-cliente { font-size: 1rem; color: #FFF; font-weight: bold; }
         .pedido-detalhe { font-size: 0.85rem; color: #AAA; margin-top: 3px; }
         
+        /* Botões de Ação Directa nos Cards */
+        .card-actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid #2A2A2A; padding-top: 8px; }
+        .btn-card { flex: 1; padding: 8px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; font-size: 0.85rem; display: inline-block; }
+        .btn-card-mapa { background: #00C853; color: #FFF; }
+        .btn-card-editar { background: #00BCD4; color: #000; }
+
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; padding: 10px; overflow-y: auto; }
         .modal-content { background: #1E1E1E; border: 1px solid #00BCD4; border-radius: 8px; padding: 15px; max-width: 550px; margin: 10px auto; }
         .modal-title { color: #00BCD4; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 12px; font-size: 1.1rem; text-align: center; }
@@ -30,7 +37,7 @@
         .grid-2 { display: flex; gap: 8px; }
         .grid-2 > div { flex: 1; }
 
-        /* Estilo dos Subformulários (Tabelas/Listas) */
+        /* Estilo dos Subformulários (Listas Dinâmicas) */
         .subform-box { background: #181818; border: 1px solid #333; border-radius: 6px; padding: 10px; margin-bottom: 15px; }
         .subform-title { font-size: 0.85rem; font-weight: bold; color: #00BCD4; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .subform-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
@@ -52,18 +59,18 @@
     <button class="btn btn-novo" onclick="abrirModalNovaVenda()">➕ Nova Venda / Cadastro</button>
     <div id="lista-pedidos"><p style="text-align: center; color: #888;">Carregando vendas...</p></div>
 
-    <!-- MODAL NOVA VENDA -->
-    <div id="modal-nova-venda" class="modal">
+    <!-- MODAL NOVA / EDITAR VENDA -->
+    <div id="modal-venda" class="modal">
         <div class="modal-content">
-            <h2 class="modal-title">🛒 Nova Venda Multi-Itens</h2>
+            <h2 class="modal-title" id="modal-titulo">🛒 Registro de Venda</h2>
             
-            <div class="field-group"><label>Nome do Cliente *</label><input type="text" id="novo-nome" placeholder="Nome Completo"></div>
-            <div class="field-group"><label>Telefone / WhatsApp *</label><input type="text" id="novo-telefone" placeholder="(00) 00000-0000"></div>
-            <div class="field-group"><label>Endereço Completo *</label><input type="text" id="novo-endereco" placeholder="Rua, Número"></div>
+            <div class="field-group"><label>Nome do Cliente *</label><input type="text" id="venda-nome" placeholder="Nome Completo"></div>
+            <div class="field-group"><label>Telefone / WhatsApp *</label><input type="text" id="venda-telefone" placeholder="(00) 00000-0000"></div>
+            <div class="field-group"><label>Endereço Completo *</label><input type="text" id="venda-endereco" placeholder="Rua, Número"></div>
             
             <div class="grid-2">
-                <div class="field-group"><label>Bairro</label><input type="text" id="novo-bairro"></div>
-                <div class="field-group"><label>Ponto de Ref.</label><input type="text" id="novo-referencia"></div>
+                <div class="field-group"><label>Bairro</label><input type="text" id="venda-bairro"></div>
+                <div class="field-group"><label>Ponto de Ref.</label><input type="text" id="venda-referencia"></div>
             </div>
 
             <!-- SUBFORMULÁRIO DE PRODUTOS -->
@@ -90,8 +97,8 @@
                 <div>Total Pago: <b id="lbl-total-pago" style="color: #00BCD4;">R$ 0,00</b></div>
             </div>
 
-            <button class="btn btn-salvar" onclick="gravarNovaVenda()">🚀 Registrar Venda</button>
-            <button class="btn btn-fechar" onclick="fecharModal('modal-nova-venda')">Cancelar</button>
+            <button class="btn btn-salvar" onclick="gravarVenda()">🚀 Salvar Pedido</button>
+            <button class="btn btn-fechar" onclick="fecharModal('modal-venda')">Cancelar</button>
         </div>
     </div>
 
@@ -99,6 +106,8 @@
         const firebaseConfig = { databaseURL: "https://jbfer-deliveryapp-default-rtdb.firebaseio.com" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
+        let idPedidoEdicao = null;
 
         const listaTabelaProdutos = [
             { id: "GLP 13 KG", nome: "GLP 13 KG", preco: 145.00 },
@@ -121,7 +130,7 @@
                 const card = document.createElement('div');
                 card.className = 'card-pedido';
                 
-                // Formatação do resumo visual do card
+                // Formatação do resumo visual dos produtos
                 let textoProdutos = "";
                 if(Array.isArray(p.itens)) {
                     textoProdutos = p.itens.map(i => `${i.qtd}x ${i.produto}`).join(', ');
@@ -129,6 +138,7 @@
                     textoProdutos = p.produtos || 'Sem produtos';
                 }
 
+                // Formatação do resumo visual dos pagamentos
                 let textoPagamento = "";
                 if(Array.isArray(p.pagamentos)) {
                     textoPagamento = p.pagamentos.map(pg => `${pg.forma} (R$ ${parseFloat(pg.valor).toFixed(2)})`).join(', ');
@@ -136,27 +146,77 @@
                     textoPagamento = p.forma_pagamento || 'A combinar';
                 }
 
-                card.innerHTML = `<div class="pedido-header"><span>#${p.pedido_id || id}</span><span>R$ ${parseFloat(p.valor || 0).toFixed(2)}</span></div>` +
-                                 `<div class="pedido-cliente">${p.cliente || 'CLIENTE NÃO INFORMADO'}</div>` +
-                                 `<div class="pedido-detalhe">📦 ${textoProdutos}</div>` +
-                                 `<div class="pedido-detalhe">💳 ${textoPagamento}</div>` +
-                                 `<div class="pedido-detalhe">📍 ${p.endereco || 'Sem endereço'}</div>`;
+                const enderecoEncoded = encodeURIComponent(p.endereco || '');
+
+                card.innerHTML = 
+                    `<div class="pedido-header"><span>#${p.pedido_id || id}</span><span>R$ ${parseFloat(p.valor || 0).toFixed(2)}</span></div>` +
+                    `<div class="pedido-cliente">${p.cliente || 'CLIENTE NÃO INFORMADO'}</div>` +
+                    `<div class="pedido-detalhe">📦 ${textoProdutos}</div>` +
+                    `<div class="pedido-detalhe">💳 ${textoPagamento}</div>` +
+                    `<div class="pedido-detalhe">📍 ${p.endereco || 'Sem endereço'}</div>` +
+                    `<div class="card-actions">` +
+                        `<a class="btn-card btn-card-mapa" href="https://www.google.com/maps/search/?api=1&query=${enderecoEncoded}" target="_blank">🗺️ Rota GPS</a>` +
+                        `<button class="btn-card btn-card-editar" onclick="abrirModalEditarVenda('${id}')">✏️ Editar</button>` +
+                    `</div>`;
+                
                 container.appendChild(card);
             });
         });
 
         function abrirModalNovaVenda() {
+            idPedidoEdicao = null;
+            document.getElementById('modal-titulo').innerText = '🛒 Nova Venda Multi-Itens';
+            document.getElementById('venda-nome').value = '';
+            document.getElementById('venda-telefone').value = '';
+            document.getElementById('venda-endereco').value = '';
+            document.getElementById('venda-bairro').value = '';
+            document.getElementById('venda-referencia').value = '';
+            
             document.getElementById('container-produtos').innerHTML = '';
             document.getElementById('container-pagamentos').innerHTML = '';
             adicionarLinhaProduto();
             adicionarLinhaPagamento();
-            document.getElementById('modal-nova-venda').style.display = 'block';
+            document.getElementById('modal-venda').style.display = 'block';
+        }
+
+        function abrirModalEditarVenda(id) {
+            db.ref('pedidos_pendentes/' + id).once('value').then((snapshot) => {
+                if(!snapshot.exists()) return;
+                const p = snapshot.val();
+                idPedidoEdicao = id;
+                
+                document.getElementById('modal-titulo').innerText = '✏️ Editar Pedido #' + (p.pedido_id || id);
+                document.getElementById('venda-nome').value = p.cliente || '';
+                document.getElementById('venda-telefone').value = p.telefone || '';
+                document.getElementById('venda-endereco').value = p.endereco || '';
+                document.getElementById('venda-bairro').value = p.bairro || '';
+                document.getElementById('venda-referencia').value = p.referencia || '';
+
+                document.getElementById('container-produtos').innerHTML = '';
+                document.getElementById('container-pagamentos').innerHTML = '';
+
+                // Carrega produtos existentes ou gera linha padrão
+                if(Array.isArray(p.itens) && p.itens.length > 0) {
+                    p.itens.forEach(item => adicionarLinhaProduto(item.produto, item.qtd, item.preco_unitario));
+                } else {
+                    adicionarLinhaProduto(p.produtos || "GLP 13 KG", p.quantidade || 1, p.preco_unitario || 145.00);
+                }
+
+                // Carrega pagamentos existentes ou gera linha padrão
+                if(Array.isArray(p.pagamentos) && p.pagamentos.length > 0) {
+                    p.pagamentos.forEach(pag => adicionarLinhaPagamento(pag.forma, pag.valor));
+                } else {
+                    adicionarLinhaPagamento(p.forma_pagamento || "Dinheiro", p.valor || 145.00);
+                }
+
+                document.getElementById('modal-venda').style.display = 'block';
+            });
         }
 
         function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
 
         // GERENCIAMENTO DE LINHAS DE PRODUTOS
-        function adicionarLinhaProduto() {
+        function adicionarLinhaProduto(prodVal = null, qtdVal = 1, precoVal = null) {
             const container = document.getElementById('container-produtos');
             const row = document.createElement('div');
             row.className = 'subform-row row-produto';
@@ -165,12 +225,19 @@
             
             row.innerHTML = `
                 <select style="flex: 2;" class="prod-select" onchange="atualizarPrecoLinha(this)">${options}</select>
-                <input type="number" style="flex: 0.8;" class="prod-qtd" value="1" min="1" oninput="calcularTotais()">
+                <input type="number" style="flex: 0.8;" class="prod-qtd" value="${qtdVal}" min="1" oninput="calcularTotais()">
                 <input type="number" style="flex: 1;" class="prod-preco" value="145.00" step="0.01" oninput="calcularTotais()">
                 <button class="btn-del" onclick="removerLinha(this)">X</button>
             `;
             container.appendChild(row);
-            atualizarPrecoLinha(row.querySelector('.prod-select'));
+
+            if(prodVal) row.querySelector('.prod-select').value = prodVal;
+            if(precoVal !== null) {
+                row.querySelector('.prod-preco').value = parseFloat(precoVal).toFixed(2);
+            } else {
+                atualizarPrecoLinha(row.querySelector('.prod-select'));
+            }
+            calcularTotais();
         }
 
         function atualizarPrecoLinha(selectElement) {
@@ -183,7 +250,7 @@
         }
 
         // GERENCIAMENTO DE LINHAS DE PAGAMENTO
-        function adicionarLinhaPagamento() {
+        function adicionarLinhaPagamento(formaVal = null, valorVal = 0.00) {
             const container = document.getElementById('container-pagamentos');
             const row = document.createElement('div');
             row.className = 'subform-row row-pagamento';
@@ -192,10 +259,11 @@
             
             row.innerHTML = `
                 <select style="flex: 2;" class="pag-forma">${options}</select>
-                <input type="number" style="flex: 1.2;" class="pag-valor" value="0.00" step="0.01" oninput="calcularTotais()">
+                <input type="number" style="flex: 1.2;" class="pag-valor" value="${parseFloat(valorVal).toFixed(2)}" step="0.01" oninput="calcularTotais()">
                 <button class="btn-del" onclick="removerLinha(this)">X</button>
             `;
             container.appendChild(row);
+            if(formaVal) row.querySelector('.pag-forma').value = formaVal;
             calcularTotais();
         }
 
@@ -221,10 +289,10 @@
             document.getElementById('lbl-total-pago').innerText = 'R$ ' + totalPag.toFixed(2);
         }
 
-        function gravarNovaVenda() {
-            const nome = document.getElementById('novo-nome').value;
-            const tel = document.getElementById('novo-telefone').value;
-            const end = document.getElementById('novo-endereco').value;
+        function gravarVenda() {
+            const nome = document.getElementById('venda-nome').value;
+            const tel = document.getElementById('venda-telefone').value;
+            const end = document.getElementById('venda-endereco').value;
             
             if(!nome || !end) { alert('Preencha Nome e Endereço obrigatoriamente!'); return; }
 
@@ -249,13 +317,14 @@
 
             if(itens.length === 0) { alert('Adicione ao menos um produto!'); return; }
 
-            const novoId = 'APP_' + Date.now();
+            const keyId = idPedidoEdicao ? idPedidoEdicao : 'APP_' + Date.now();
             const dadosVenda = {
-                pedido_id: novoId,
+                pedido_id: keyId,
                 cliente: nome,
                 telefone: tel,
-                endereco: end + (document.getElementById('novo-bairro').value ? ', ' + document.getElementById('novo-bairro').value : ''),
-                referencia: document.getElementById('novo-referencia').value,
+                endereco: end,
+                bairro: document.getElementById('venda-bairro').value,
+                referencia: document.getElementById('venda-referencia').value,
                 itens: itens,
                 pagamentos: pagamentos,
                 valor: totalGeral,
@@ -263,9 +332,12 @@
                 origem: 'MOBILE'
             };
 
-            db.ref('pedidos_pendentes/' + novoId).set(dadosVenda)
-                .then(() => { alert('Nova venda gravada com sucesso!'); fecharModal('modal-nova-venda'); })
-                .catch((err) => { alert('Erro ao registrar: ' + err.message); });
+            db.ref('pedidos_pendentes/' + keyId).set(dadosVenda)
+                .then(() => { 
+                    alert('Pedido salvo com sucesso!'); 
+                    fecharModal('modal-venda'); 
+                })
+                .catch((err) => { alert('Erro ao salvar: ' + err.message); });
         }
     </script>
 </body>
