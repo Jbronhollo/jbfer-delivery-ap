@@ -20,7 +20,6 @@
         .pedido-cliente { font-size: 1rem; color: #FFF; font-weight: bold; }
         .pedido-detalhe { font-size: 0.85rem; color: #AAA; margin-top: 3px; }
         
-        /* Botões de Ação Direta nos Cards */
         .card-actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid #2A2A2A; padding-top: 8px; }
         .btn-card { flex: 1; padding: 8px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; font-size: 0.85rem; display: inline-block; }
         .btn-card-mapa { background: #00C853; color: #FFF; }
@@ -37,7 +36,6 @@
         .grid-2 { display: flex; gap: 8px; }
         .grid-2 > div { flex: 1; }
 
-        /* Estilo dos Subformulários (Listas Dinâmicas) */
         .subform-box { background: #181818; border: 1px solid #333; border-radius: 6px; padding: 10px; margin-bottom: 15px; }
         .subform-title { font-size: 0.85rem; font-weight: bold; color: #00BCD4; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .subform-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
@@ -110,13 +108,23 @@
 
         let idPedidoEdicao = null;
 
-        const listaTabelaProdutos = [
-            { id: "GLP 13 KG", nome: "GLP 13 KG", preco: 145.00 },
-            { id: "GLP 45 KG", nome: "GLP 45 KG", preco: 430.00 },
-            { id: "AGUA 20L", nome: "ÁGUA MINERAL 20L", preco: 18.00 }
-        ];
+        // Listas dinâmicas sincronizadas direto do Firebase (Access)
+        let listaTabelaProdutos = [];
+        let listaFormasPagamento = [];
 
-        const listaFormasPagamento = ["Dinheiro", "PIX", "Cartão de Crédito", "Cartão de Débito", "Vale Mercado"];
+        // Ouve atualizações da tabela de produtos enviadas pelo Access
+        db.ref('tabela_produtos').on('value', (snapshot) => {
+            if (snapshot.exists()) {
+                listaTabelaProdutos = snapshot.val();
+            }
+        });
+
+        // Ouve atualizações de formas de pagamento enviadas pelo Access
+        db.ref('tabela_pagamentos').on('value', (snapshot) => {
+            if (snapshot.exists()) {
+                listaFormasPagamento = snapshot.val();
+            }
+        });
 
         db.ref('pedidos_pendentes').on('value', (snapshot) => {
             const container = document.getElementById('lista-pedidos');
@@ -173,8 +181,8 @@
             
             document.getElementById('container-produtos').innerHTML = '';
             document.getElementById('container-pagamentos').innerHTML = '';
-            adicionarLinhaProduto("GLP 13 KG", 1, 145.00);
-            adicionarLinhaPagamento("Dinheiro", 145.00);
+            adicionarLinhaProduto();
+            adicionarLinhaPagamento();
             document.getElementById('modal-venda').style.display = 'block';
         }
 
@@ -197,13 +205,13 @@
                 if(Array.isArray(p.itens) && p.itens.length > 0) {
                     p.itens.forEach(item => adicionarLinhaProduto(item.produto, item.qtd, item.preco_unitario));
                 } else {
-                    adicionarLinhaProduto(p.produtos || "GLP 13 KG", p.quantidade || 1, p.preco_unitario || 145.00);
+                    adicionarLinhaProduto(p.produtos || "", p.quantidade || 1, p.preco_unitario || 0);
                 }
 
                 if(Array.isArray(p.pagamentos) && p.pagamentos.length > 0) {
                     p.pagamentos.forEach(pag => adicionarLinhaPagamento(pag.forma, pag.valor));
                 } else {
-                    adicionarLinhaPagamento(p.forma_pagamento || "Dinheiro", p.valor || 145.00);
+                    adicionarLinhaPagamento("Dinheiro", p.valor || 0);
                 }
 
                 document.getElementById('modal-venda').style.display = 'block';
@@ -212,14 +220,15 @@
 
         function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        // GERENCIAMENTO DE LINHAS DE PRODUTOS
         function adicionarLinhaProduto(prodVal = null, qtdVal = 1, precoVal = null) {
             const container = document.getElementById('container-produtos');
             const row = document.createElement('div');
             row.className = 'subform-row row-produto';
             
             let options = `<option value="">-- Selecione o Produto --</option>`;
-            options += listaTabelaProdutos.map(p => `<option value="${p.id}" data-preco="${p.preco}">${p.nome}</option>`).join('');
+            if (Array.isArray(listaTabelaProdutos)) {
+                options += listaTabelaProdutos.map(p => `<option value="${p.id || p.nome}" data-preco="${p.preco}">${p.nome || p.id}</option>`).join('');
+            }
             
             const precoFormatado = (precoVal !== null && precoVal !== undefined) ? parseFloat(precoVal).toFixed(2) : "";
 
@@ -232,23 +241,9 @@
             container.appendChild(row);
 
             const selectElement = row.querySelector('.prod-select');
-
             if (prodVal) {
                 selectElement.value = prodVal;
-                if (selectElement.selectedIndex === -1 || selectElement.value !== prodVal) {
-                    const strBusca = String(prodVal).toUpperCase();
-                    for (let i = 0; i < selectElement.options.length; i++) {
-                        const optValue = selectElement.options[i].value.toUpperCase();
-                        if (optValue !== "" && (strBusca.includes(optValue) || optValue.includes(strBusca))) {
-                            selectElement.selectedIndex = i;
-                            break;
-                        }
-                    }
-                }
-            } else {
-                selectElement.selectedIndex = 0;
             }
-
             calcularTotais();
         }
 
@@ -263,13 +258,15 @@
             calcularTotais();
         }
 
-        // GERENCIAMENTO DE LINHAS DE PAGAMENTO
         function adicionarLinhaPagamento(formaVal = null, valorVal = null) {
             const container = document.getElementById('container-pagamentos');
             const row = document.createElement('div');
             row.className = 'subform-row row-pagamento';
             
-            let options = listaFormasPagamento.map(f => `<option value="${f}">${f}</option>`).join('');
+            let options = `<option value="">-- Forma Pgto --</option>`;
+            if (Array.isArray(listaFormasPagamento)) {
+                options += listaFormasPagamento.map(f => `<option value="${f}">${f}</option>`).join('');
+            }
             
             let valorDefinido = 0;
             if (valorVal !== null && valorVal !== undefined) {
@@ -301,15 +298,6 @@
             const selectPag = row.querySelector('.pag-forma');
             if(formaVal) {
                 selectPag.value = formaVal;
-                if(selectPag.selectedIndex === -1) {
-                    const strForma = String(formaVal).toUpperCase();
-                    for(let i = 0; i < selectPag.options.length; i++) {
-                        if(strForma.includes(selectPag.options[i].value.toUpperCase())) {
-                            selectPag.selectedIndex = i;
-                            break;
-                        }
-                    }
-                }
             }
             calcularTotais();
         }
